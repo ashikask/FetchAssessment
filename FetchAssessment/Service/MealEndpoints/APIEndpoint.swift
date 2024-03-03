@@ -11,20 +11,24 @@ import Foundation
 ///
 /// Conforming types will specify the URL components required to construct a network request,
 /// including the base URL, path, method, and any parameters.
-protocol Endpoint {
+public protocol Endpoint {
     /// The base URL of the API endpoint. Typically includes the root address
     /// of the API and may include a version path component.
-    var baseURL: URL { get }
+    var baseURL: String { get }
+    
+    /// The version of the API to be used with this endpoint.
+    var version: String { get }
     
     /// The path component for the specific endpoint, appended to the base URL.
     var path: String { get }
     
-    /// The HTTP method (e.g., GET, POST) used for requests to this endpoint.
-    var method: HTTPMethod { get }
-    
     /// Parameters for the request. These could be query parameters or body parameters,
     /// depending on the HTTP method and endpoint requirements.
     var parameters: [String: Any]? { get }
+    
+    /// Constructs the full URL string including the base URL, version, and path.
+    /// This method can be used to generate the complete URL string for a request.
+    func fullURL() -> String
 }
 
 // Default implementation for the Endpoint protocol providing a common base URL.
@@ -33,7 +37,19 @@ extension Endpoint {
     /// that all conforming types use a consistent API base address.
     ///
     /// - Returns: A `URL` representing the base address of the API.
-    var baseURL: URL {
-        URL(string: "https://themealdb.com/api/json/v1/")!
+    var baseURL: String {
+        "https://themealdb.com/api/json/"
     }
+    
+    // Default API version can be specified here if most endpoints use the same version,
+    // or you can require each conforming type to specify its own version.
+    var version: String {
+        "v1/1"
+    }
+    
+    // A default implementation of fullURL that constructs the complete URL string
+    func fullURL() -> String {
+        return "\(baseURL)\(version)/\(path)"
+    }
+    
 }
