@@ -13,52 +13,66 @@ protocol MealDetailViewModelProtocol: ObservableObject {
     func fetchMealDetail()
 }
 
+/// A ViewModel for managing the state and data of meal detail.
+///
+/// Conforms to `MealDetailViewModelProtocol` for fetching meal details and `ViewModelStateProtocol` to reflect the fetch state.
 class MealDetailViewModel: MealDetailViewModelProtocol, ViewModelStateProtocol, ObservableObject {
+    
+    /// Holds the detailed information about a meal. It's `nil` until data is fetched successfully.
     @Published var mealDetail: Meal?
+    
+    /// Represents the current state of the ViewModel with respect to data fetching and presentation.
+    /// The state is observable and can be used to update the UI accordingly.
     @Published private(set) var state: ViewModelState<Meal> = .idle
+    
+    /// Stores subscriptions to prevent them from being deallocated prematurely.
     private var cancellables = Set<AnyCancellable>()
+    
+    /// The API client used for making network requests. Allows for dependency injection for easier testing.
     private let apiClient: APIClient
+    
+    /// The unique identifier of the meal to fetch details for.
     private let mealId: String
     
-    // Fetch the meal detail for the meal id from the api and update the UI
+    /// Fetches the details for a meal identified by `mealId` and updates the ViewModel's state and `mealDetail`.
+    ///
+    /// It sets the state to `.loading` before making the fetch request. Upon receiving a response, it updates
+    /// `mealDetail` and changes the state to either `.loaded` with the fetched meal, `.empty` if no meal was fetched,
+    /// or `.failed` with an error message if an error occurred.
     func fetchMealDetail() {
         self.state = .loading
-        let mealId = mealId
         let request = MealRequest(detailForMealId: mealId)
         
         apiClient.performRequest(request)
             .receive(on: RunLoop.main)
             .sink(receiveCompletion: { [weak self] completion in
-                // Handle the completion of the subscription.
                 switch completion {
                 case .failure(let error):
-                    // If there's an error, update the state to reflect the failure.
                     self?.state = .failed("Failed to fetch meal details: \(error.localizedDescription)")
                 case .finished:
-                    // No action needed for the .finished case at the moment.
                     break
                 }
             }, receiveValue: { [weak self] (response: MealsResponse) in
-                // Update the mealDetail with the first meal from the response.
                 guard let mealDetail = response.meals.first else {
-                    // If there are no meals in the response, update the state to .empty.
                     self?.state = .empty
                     return
                 }
                 
-                // If a meal is found, update mealDetail and set the state to .loaded.
                 self?.mealDetail = mealDetail
                 self?.state = .loaded(mealDetail)
             })
             .store(in: &cancellables)
-        
     }
     
-    // initializer to accept an APIClient instance and an optional mealId
+    /// Initializes the ViewModel with an `APIClient` instance and a meal ID.
+    /// - Parameters:
+    ///   - apiClient: The API client to use for network requests.
+    ///   - mealId: The unique identifier of the meal for which to fetch details.
     init(apiClient: APIClient, mealId: String) {
         self.apiClient = apiClient
         self.mealId = mealId
     }
 }
+
 
 

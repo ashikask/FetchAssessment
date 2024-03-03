@@ -149,8 +149,8 @@
 			children = (
 				F2DBE4E22B8ECD4E0073D5C6 /* FetchAssessmentTests.swift */,
 				F2DBE52B2B9008FF0073D5C6 /* MockAPIClient.swift */,
-				F2DBE52D2B9009AC0073D5C6 /* MealDetailViewModelTests.swift */,
 				F206BAB42B950D750043A2DE /* MealModelTest.swift */,
+				F2DBE52D2B9009AC0073D5C6 /* MealDetailViewModelTests.swift */,
 				F206BAB62B950FA80043A2DE /* MealListViewModelTests.swift */,
 			);
 			path = FetchAssessmentTests;
