@@ -12,50 +12,67 @@ struct ContentView: View {
     
     var body: some View {
         NavigationView {
-            List {
-                if viewModel.isLoading {
-                    ProgressView("Loading meals...")
-                        .frame(maxWidth: .infinity, alignment: .center)
-                } else {
-                    ForEach(viewModel.meals) { meal in
-                        NavigationLink(destination: MealDetailView(viewModel: MealDetailViewModel(apiClient: URLSessionAPIClient(), mealId: meal.id))) {
-                            
-                            HStack {
-                                AsyncImage(url: URL(string: meal.thumbnailURL ?? "")) {
-                                    phase in
-                                    switch phase {
-                                    case .failure(_):
-                                        Color.gray
-                                            .frame(width: 60, height: 60)
-                                            .cornerRadius(8)
-                                    case .success(let image):
-                                        image
-                                            .resizable()
-                                            .scaledToFit()
-                                            .frame(width: 60, height: 60)
-                                            .cornerRadius(8)
-                                    default:
-                                        ProgressView()
-                                            .frame(width: 60, height: 60)
-                                    }
-                                    
-                                }
-                                
-                                Text(meal.name)
-                                    .font(.headline)
-                            }
-                        }
-                    }
-                }
+            List(viewModel.meals) { meal in
+                MealRow(meal: meal)
             }
+            .listStyle(PlainListStyle())
             .navigationTitle("Meals")
-            .onAppear {
-                viewModel.fetchMeals()
+            .overlay(contentOverlay)
+            .onAppear(perform: viewModel.fetchMeals)
+        }
+    }
+    
+    init() {
+        _viewModel = StateObject(wrappedValue: MealListViewModel())
+    }
+    
+    @ViewBuilder
+    private var contentOverlay: some View {
+        switch viewModel.state {
+        case .loading:
+            ProgressView("Loading meals...")
+        case .failed(let message):
+            Text(message).foregroundColor(.red)
+        case .empty:
+            Text("No meals found.").foregroundColor(.gray)
+        default:
+            EmptyView()
+        }
+    }
+}
+
+struct MealRow: View {
+    let meal: Meal
+    var body: some View {
+        NavigationLink(destination: MealDetailView(viewModel: MealDetailViewModel(apiClient: URLSessionAPIClient(), mealId: meal.id))) {
+            HStack {
+                MealThumbnail(url: meal.thumbnailURL)
+                Text(meal.name).font(.headline)
+            }
+        }
+    }
+}
+
+struct MealThumbnail: View {
+    let url: String?
+    
+    private let placeholderColor = Color.gray
+    private let imageSize: CGFloat = 60
+    private let cornerRadius: CGFloat = 8
+    var body: some View {
+        AsyncImage(url: URL(string: url ?? "")) { phase in
+            switch phase {
+            case .failure(_):
+                placeholderColor.frame(width: imageSize, height: imageSize).cornerRadius(cornerRadius)
+            case .success(let image):
+                image.resizable().scaledToFit().frame(width: imageSize, height: imageSize).cornerRadius(cornerRadius)
+            default:
+                ProgressView().frame(width: imageSize, height: imageSize)
             }
         }
     }
 }
 
 #Preview {
-    ContentView(viewModel: MealListViewModel(apiClient: URLSessionAPIClient(), category: "Dessert"))
+    ContentView()
 }

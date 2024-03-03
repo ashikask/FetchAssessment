@@ -11,7 +11,7 @@ import Foundation
 ///
 /// Conforming types will specify the URL components required to construct a network request,
 /// including the base URL, path, method, and any parameters.
-public protocol Endpoint {
+protocol Endpoint {
     /// The base URL of the API endpoint. Typically includes the root address
     /// of the API and may include a version path component.
     var baseURL: String { get }

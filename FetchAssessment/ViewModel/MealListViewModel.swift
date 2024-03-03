@@ -13,29 +13,41 @@ protocol MealListViewModelProtocol: ObservableObject {
     func fetchMeals()
 }
 
-class MealListViewModel: MealListViewModelProtocol, ObservableObject {
+class MealListViewModel: MealListViewModelProtocol, ViewModelStateProtocol, ObservableObject {
     @Published var meals: [Meal] = []
-    @Published var isLoading = false
+    @Published private(set) var state: ViewModelState<[Meal]> = .idle
     private var cancellables = Set<AnyCancellable>()
     private let apiClient: APIClient
-    private var category: String = "Dessert"
+    private var category: String
     
+    // Fetch the meal list from the api and update the UI
     func fetchMeals() {
-        isLoading = true
+        self.state = .loading
         let request = MealRequest(listForCategory: category)
         
         apiClient.performRequest(request)
             .receive(on: DispatchQueue.main)
             .sink(receiveCompletion: { [weak self] completion in
-                self?.isLoading = false
+                switch completion {
+                case .failure(let error):
+                    // If there's an error, update the state to reflect the failure.
+                    self?.state = .failed("Failed to fetch meal details: \(error.localizedDescription)")
+                case .finished:
+                    // No action needed for the .finished case at the moment.
+                    break
+                }
             }, receiveValue: { [weak self] (response: MealsResponse) in
-                self?.meals = response.meals.sorted { $0.name < $1.name }
+                let sortedMeals = response.meals.sorted { $0.name < $1.name }
+                self?.meals = sortedMeals
+                
+                // If sortedMeals is empty, set state to .empty, otherwise to .loaded with the sorted meals.
+                self?.state = sortedMeals.isEmpty ? .empty : .loaded(sortedMeals)
             })
             .store(in: &cancellables)
     }
     
     // initializer to accept an APIClient instance and category
-    init(apiClient: APIClient, category: String = "Dessert") {
+    init(apiClient: APIClient = URLSessionAPIClient(), category: String = "Dessert") {
         self.apiClient = apiClient
         self.category = category
     }

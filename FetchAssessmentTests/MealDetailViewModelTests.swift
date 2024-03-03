@@ -10,20 +10,15 @@ import Combine
 @testable import FetchAssessment
 
 final class MealDetailViewModelTests: XCTestCase {
-    var viewModel: MealDetailViewModel!
-    var mockAPIClient: MockAPIClient!
+    
     private var cancellables: Set<AnyCancellable>!
     
     override func setUpWithError() throws {
-        mockAPIClient = MockAPIClient()
-        viewModel = MealDetailViewModel(apiClient: mockAPIClient)
         cancellables = []
     }
     
     override func tearDownWithError() throws {
         // Put teardown code here. This method is called after the invocation of each test method in the class.
-        viewModel = nil
-        mockAPIClient = nil
         cancellables = nil
         super.tearDown()
     }
@@ -44,8 +39,8 @@ final class MealDetailViewModelTests: XCTestCase {
     }
     
     func testFetchMealDetailSuccess() {
-           // Prepare mock response
-           let jsonData = """
+        // Prepare mock response
+        let jsonData = """
            {
              "meals": [
                {
@@ -54,7 +49,7 @@ final class MealDetailViewModelTests: XCTestCase {
                  "strDrinkAlternate": null,
                  "strCategory": "Dessert",
                  "strArea": "British",
-                 "strInstructions": "Heat oven to 190C/170C fan/gas 5. Tip the flour and sugar into a large bowl. Add the butter, then rub into the flour using your fingertips to make a light breadcrumb texture. Do not overwork it or the crumble will become heavy. Sprinkle the mixture evenly over a baking sheet and bake for 15 mins or until lightly coloured.\r\nMeanwhile, for the compote, peel, core and cut the apples into 2cm dice. Put the butter and sugar in a medium saucepan and melt together over a medium heat. Cook for 3 mins until the mixture turns to a light caramel. Stir in the apples and cook for 3 mins. Add the blackberries and cinnamon, and cook for 3 mins more. Cover, remove from the heat, then leave for 2-3 mins to continue cooking in the warmth of the pan.\r\nTo serve, spoon the warm fruit into an ovenproof gratin dish, top with the crumble mix, then reheat in the oven for 5-10 mins. Serve with vanilla ice cream.",
+                 "strInstructions": "Heat oven to 190C/170C fan/gas 5. Tip the flour and sugar into a large bowl. Add the butter, then rub into the flour using your fingertips to make a light breadcrumb texture. Do not overwork it or the crumble will become heavy. Sprinkle the mixture evenly over a baking sheet and bake for 15 mins or until lightly coloured.",
                  "strMealThumb": "https://www.themealdb.com/images/media/meals/xvsurr1511719182.jpg",
                  "strTags": "Pudding",
                  "strYoutube": "https://www.youtube.com/watch?v=4vhcOwVBDO4",
@@ -106,23 +101,87 @@ final class MealDetailViewModelTests: XCTestCase {
              ]
            }
            """.data(using: .utf8)!
-           mockAPIClient.result = .success(jsonData)
-           
-           let expectation = XCTestExpectation(description: "MealDetail fetched and parsed")
-           
-           viewModel.$mealDetail
-               .dropFirst() // Ignore initial value
-               .sink { mealDetail in
-                   XCTAssertNotNil(mealDetail)
-                   XCTAssertEqual(mealDetail?.id, "52893")
-                   XCTAssertEqual(mealDetail?.name, "Apple & Blackberry Crumble")
-                   expectation.fulfill()
-               }
-               .store(in: &cancellables)
-           
-           viewModel.fetchMealDetail()
-           
-           wait(for: [expectation], timeout: 1.0)
-       }
+        let mockAPIClient: MockAPIClient = MockAPIClient()
+        let viewModel: MealDetailViewModel = MealDetailViewModel(apiClient: mockAPIClient, mealId: "52893")
+        
+        mockAPIClient.result = .success(jsonData)
+        
+        let expectation = XCTestExpectation(description: "MealDetail fetched and parsed")
+        
+        viewModel.$mealDetail
+            .dropFirst() // Ignore initial value
+            .sink { mealDetail in
+                XCTAssertNotNil(mealDetail)
+                XCTAssertEqual(mealDetail?.id, "52893")
+                XCTAssertEqual(mealDetail?.name, "Apple & Blackberry Crumble")
+                expectation.fulfill()
+            }
+            .store(in: &cancellables)
+        
+        viewModel.fetchMealDetail()
+        
+        wait(for: [expectation], timeout: 1.0)
+    }
+    
+    func testFetchMealDetailFailure() throws {
+        // Create an instance of your mock API client
+        let mockAPIClient = MockAPIClient()
+        
+        // Initialize your view model with the mock API client
+        let viewModel = MealDetailViewModel(apiClient: mockAPIClient, mealId: "invalid")
+        mockAPIClient.result = .failure(APIError.noResponse)
+        let expectation = self.expectation(description: "Fetch meal detail failure")
+        
+        // When
+        viewModel.fetchMealDetail()
+        
+        // Then
+        viewModel.$state
+            .dropFirst()
+            .sink { state in
+                if case .failed(let errorMessage) = state {
+                    XCTAssertNotNil(errorMessage) // Ensure there is an error message
+                    expectation.fulfill()
+                }
+            }
+            .store(in: &cancellables)
+        
+        wait(for: [expectation], timeout: 1.0)
+    }
+    
+    func testFetchMealsEmptyState() throws {
+        // Create an instance of your mock API client
+        let mockAPIClient = MockAPIClient()
+
+        // Simulate an empty data response
+        let mealEmptyData = """
+        {
+            "meals": []
+        }
+        """.data(using: .utf8)!
+        mockAPIClient.result = .success(mealEmptyData)
+
+        // Initialize your view model with the mock API client
+        let viewModel = MealDetailViewModel(apiClient: mockAPIClient, mealId: "65432")
+
+        // Set up an expectation for the asynchronous operation
+        let expectation = XCTestExpectation(description: "Expecting the state to become .empty")
+
+        // Observe the state property for changes
+        viewModel.$state
+            .dropFirst() // Skip the initial value
+            .sink { state in
+                if case .empty = state {
+                    expectation.fulfill()
+                }
+            }
+            .store(in: &cancellables)
+
+        // Trigger the fetch operation
+        viewModel.fetchMealDetail()
+
+        // Wait for the expectations to be fulfilled
+        wait(for: [expectation], timeout: 1.0)
+    }
     
 }

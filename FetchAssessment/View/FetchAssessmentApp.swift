@@ -11,7 +11,7 @@ import SwiftUI
 struct FetchAssessmentApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView(viewModel: MealListViewModel(apiClient: URLSessionAPIClient(), category: "Dessert"))
+            ContentView()
         }
     }
 }

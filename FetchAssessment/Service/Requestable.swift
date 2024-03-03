@@ -7,7 +7,7 @@
 
 import Foundation
 
-public enum RequestData {
+enum RequestData {
     case json([String: Any])
     case urlEncoded([String: Any])
     
@@ -26,7 +26,7 @@ public enum RequestData {
 }
 
 /// Protocol defining the requirements for constructing a network request.
-public protocol Requestable {
+protocol Requestable {
     /// The endpoint containing the URL path and parameters for the request.
     var endpoint: Endpoint { get }
     /// The HTTP method (e.g., GET, POST) to be used for the request.
@@ -85,7 +85,7 @@ extension Requestable {
 
 
 /// Defines available HTTP methods for requests.
-public enum HTTPMethod: String {
+enum HTTPMethod: String {
     case get = "GET"
     case post = "POST"
     // Extend with other methods as needed.

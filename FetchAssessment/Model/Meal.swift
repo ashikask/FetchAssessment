@@ -7,14 +7,14 @@
 
 import Foundation
 
-public struct MealsResponse: Codable {
+struct MealsResponse: Codable {
     let meals: [Meal]
 }
 
 /// Represents detailed information about a meal, including ingredients and preparation instructions.
-public struct Meal: Codable, Identifiable {
+struct Meal: Codable, Identifiable {
     let name: String
-    public let id: String
+    let id: String
     
     let category: String?
     let area: String?
@@ -34,10 +34,9 @@ public struct Meal: Codable, Identifiable {
         case name = "strMeal", id = "idMeal", category = "strCategory", area = "strArea", instructions = "strInstructions"
         case thumbnailURL = "strMealThumb", tags = "strTags", youtubeURL = "strYoutube", alternateDrink = "strDrinkAlternate"
         case sourceURL = "strSource", imageSourceURL = "strImageSource", creativeCommonsConfirmed = "strCreativeCommonsConfirmed", dateModified = "dateModified"
-        // Explicit coding keys for ingredients and measurements are not needed
     }
     
-    public init(from decoder: Decoder) throws {
+    init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         name = try container.decode(String.self, forKey: .name)
         id = try container.decode(String.self, forKey: .id)
@@ -53,17 +52,22 @@ public struct Meal: Codable, Identifiable {
         creativeCommonsConfirmed = try container.decodeIfPresent(String.self, forKey: .creativeCommonsConfirmed)
         dateModified = try container.decodeIfPresent(String.self, forKey: .dateModified)
         
-        // Manually decode ingredients and measurements
-        let baseContainer = try decoder.container(keyedBy: DynamicCodingKeys.self)
-        ingredientsWithMeasurements = (1...20).compactMap { index in
-            let ingredientKey = DynamicCodingKeys(stringValue: "strIngredient\(index)")
-            let measurementKey = DynamicCodingKeys(stringValue: "strMeasure\(index)")
-            
-            guard let ingredientKey = ingredientKey, let measurementKey = measurementKey,
-                  let ingredient = try? baseContainer.decodeIfPresent(String.self, forKey: ingredientKey),
-                  let measurement = try? baseContainer.decodeIfPresent(String.self, forKey: measurementKey),
-                  !ingredient.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
-            return "\(ingredient): \(measurement)"
+        let dynamicContainer = try decoder.container(keyedBy: DynamicCodingKeys.self)
+        
+        // Dynamically determine the number of ingredients and measurements
+        let ingredientKeys = dynamicContainer.allKeys.filter { $0.stringValue.starts(with: "strIngredient") && !($0.stringValue.dropFirst("strIngredient".count).isEmpty) }
+        let measurementKeys = dynamicContainer.allKeys.filter { $0.stringValue.starts(with: "strMeasure") && !($0.stringValue.dropFirst("strMeasure".count).isEmpty) }
+        
+        
+        for ingredientKey in ingredientKeys {
+             let indexString = ingredientKey.stringValue.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
+               if let index = Int(indexString),
+               let measureKey = DynamicCodingKeys(stringValue: "strMeasure\(index)"),
+               let ingredient = try dynamicContainer.decodeIfPresent(String.self, forKey: ingredientKey)?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !ingredient.isEmpty,
+               let measurement = try dynamicContainer.decodeIfPresent(String.self, forKey: measureKey)?.trimmingCharacters(in: .whitespacesAndNewlines) {
+                ingredientsWithMeasurements.append("\(ingredient): \(measurement)")
+            }
         }
     }
     
@@ -80,24 +84,5 @@ public struct Meal: Codable, Identifiable {
             self.stringValue = String(intValue)
             self.intValue = intValue
         }
-    }
-}
-
-
-extension Meal {
-    // Formats ingredients and measurements into a single string for each ingredient with its measurement.
-    var formattedIngredients: [String] {
-        var ingredientsList: [String] = []
-        let mirror = Mirror(reflecting: self)
-        
-        for child in mirror.children {
-            if let label = child.label, label.starts(with: "strIngredient"), let ingredient = child.value as? String, !ingredient.isEmpty {
-                let index = label.dropFirst("strIngredient".count)
-                if let measure = mirror.descendant("strMeasure\(index)") as? String, !measure.isEmpty {
-                    ingredientsList.append("\(ingredient): \(measure)")
-                }
-            }
-        }
-        return ingredientsList
     }
 }
