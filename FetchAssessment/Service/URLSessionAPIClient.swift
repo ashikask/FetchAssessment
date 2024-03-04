@@ -47,8 +47,6 @@ class URLSessionAPIClient: APIClient {
                 .eraseToAnyPublisher()
         } catch {
             // Catch block handles errors thrown by request.asURLRequest().
-            // Here, we assume any error from asURLRequest() indicates an invalid request.
-            // You can adjust the error handling as needed based on your application's requirements.
             return Fail(error: APIError.invalidrequest).eraseToAnyPublisher()
         }
     }

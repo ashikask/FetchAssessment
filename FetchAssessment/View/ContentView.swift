@@ -7,7 +7,12 @@
 
 import SwiftUI
 
+/// `ContentView` is the main view of the application, displaying a list of meals fetched from an API.
+///
+/// This view initializes and observes a `MealListViewModel` to manage the fetching and display
+/// of meals.
 struct ContentView: View {
+    /// The view model responsible for fetching meals and managing state.
     @StateObject var viewModel: MealListViewModel
     
     var body: some View {
@@ -23,9 +28,10 @@ struct ContentView: View {
     }
     
     init() {
-        _viewModel = StateObject(wrappedValue: MealListViewModel())
+        _viewModel = StateObject(wrappedValue: MealListViewModel()) // Initializes the view model.
     }
     
+    /// Generates a view to overlay on the meal list based on the current state of meal fetching.
     @ViewBuilder
     private var contentOverlay: some View {
         switch viewModel.state {
@@ -41,8 +47,10 @@ struct ContentView: View {
     }
 }
 
+/// `MealRow` represents a single row in the meal list, displaying meal information and providing navigation to meal details.
 struct MealRow: View {
-    let meal: Meal
+    let meal: Meal // The meal data to display.
+    
     var body: some View {
         NavigationLink(destination: MealDetailView(viewModel: MealDetailViewModel(apiClient: URLSessionAPIClient(), mealId: meal.id))) {
             HStack {
@@ -53,12 +61,14 @@ struct MealRow: View {
     }
 }
 
+/// `MealThumbnail` displays a thumbnail image for a meal, handling loading and error states gracefully.
 struct MealThumbnail: View {
     let url: String?
     
     private let placeholderColor = Color.gray
     private let imageSize: CGFloat = 60
     private let cornerRadius: CGFloat = 8
+    
     var body: some View {
         AsyncImage(url: URL(string: url ?? "")) { phase in
             switch phase {
@@ -72,6 +82,7 @@ struct MealThumbnail: View {
         }
     }
 }
+
 
 #Preview {
     ContentView()
